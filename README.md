@@ -61,15 +61,15 @@ human-in-the-loop interrupt/resume via checkpointing.
                                            +-> :hold               (:hard? true)
 ```
 
-- `src/aquaculture_management/store.cljc` — `Store` protocol + `MemStore`:
+- `src/aquaculture_management/store.kotoba` — `Store` protocol + `MemStore`:
   registered aquaculture facilities, production records, supply orders, an append-only audit ledger.
-- `src/aquaculture_management/advisor.cljc` — `Advisor` protocol; `mock-advisor`
+- `src/aquaculture_management/advisor.kotoba` — `Advisor` protocol; `mock-advisor`
   (deterministic, default) proposes an aquaculture operation from a
   request; `llm-advisor` wraps a `langchain.model/ChatModel` — either
   way the advisor only ever produces a `:propose`-effect proposal,
   never a committed record, and LLM parse failures always yield
   `:confidence 0.0` (forces escalation, never fabricated confidence).
-- `src/aquaculture_management/governor.cljc` — `AquacultureGovernor/check`: a pure
+- `src/aquaculture_management/governor.kotoba` — `AquacultureGovernor/check`: a pure
   function, wired as its own `:govern` node. Hard invariants
   (unregistered facility, a proposal whose `:effect` isn't `:propose`)
   always route to `:hold`. Escalation invariants (`:flag-stock-anomaly`,
@@ -79,7 +79,7 @@ human-in-the-loop interrupt/resume via checkpointing.
   (`actor/approve!`), matching the README's robotics-premise statement
   that stock/water-quality anomalies and significant supply decisions always require
   human sign-off.
-- `src/aquaculture_management/actor.cljc` — `build-graph`, `run-request!`,
+- `src/aquaculture_management/actor.kotoba` — `build-graph`, `run-request!`,
   `approve!`: the `langgraph.graph/state-graph` wiring itself.
 
 ```bash
