@@ -1,7 +1,8 @@
 (ns aquaculture-management.governor-test
   (:require [clojure.test :refer [deftest is testing]]
             [aquaculture-management.store :as store]
-            [aquaculture-management.governor :as governor]))
+            [aquaculture-management.governor :as governor]
+            [aquaculture-management.operations :as operations]))
 
 (defn- fresh-store []
   (let [st (store/mem-store)]
@@ -73,3 +74,42 @@
     (store/append-ledger! st {:disposition :commit})
     (is (= 1 (count (store/records-of st "site-1"))))
     (is (= 1 (count (store/ledger st))))))
+
+(deftest hard-on-op-outside-the-catalog
+  ;; A registered, verified facility, :propose effect, high confidence: every
+  ;; rule the governor had before aquaculture-management.operations is
+  ;; satisfied, and this verdict was {:ok? true}.
+  (let [v (governor/check {:site-id "site-1"} {}
+                          {:op :apply-therapeutant :effect :propose :confidence 0.9 :stake :low}
+                          (fresh-store))]
+    (is (:hard? v))
+    (is (not (:ok? v)))
+    (is (not (:escalate? v)))
+    (is (= [:unknown-op] (mapv :rule (:violations v))))))
+
+(deftest hard-on-unreadable-llm-reply
+  ;; advisor/parse-proposal's fallback. It used to escalate on its 0.0
+  ;; confidence, asking a human to approve a record whose :op is :unknown.
+  (let [v (governor/check {:site-id "site-1"} {}
+                          {:op :unknown :effect :propose :confidence 0.0 :stake :high
+                           :rationale "LLM response parse failure"}
+                          (fresh-store))]
+    (is (:hard? v))
+    (is (not (:escalate? v)))
+    (is (= [:unknown-op] (mapv :rule (:violations v))))))
+
+(deftest every-permitted-op-passes-the-hard-rules
+  ;; The catalog and the governor must agree: an op the catalog permits is
+  ;; never hard-blocked for being unknown.
+  (let [st (fresh-store)]
+    (doseq [op (keys operations/permitted)]
+      (let [v (governor/check {:site-id "site-1"} {}
+                              {:op op :effect :propose :confidence 0.9 :stake :low} st)]
+        (is (not (:hard? v)) (str op " was hard-blocked"))))))
+
+(deftest catalog-is-the-advisors-documented-vocabulary
+  ;; aquaculture-management.advisor's docstring names these four ops. An op
+  ;; dropped from the catalog would otherwise just start holding, and nothing
+  ;; above fails.
+  (is (= #{:schedule-harvest :log-yield-report :order-supplies :flag-stock-anomaly}
+         (set (keys operations/permitted)))))
