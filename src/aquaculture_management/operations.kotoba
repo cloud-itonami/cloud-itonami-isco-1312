@@ -1,0 +1,32 @@
+(ns aquaculture-management.operations
+  "The closed vocabulary of aquaculture operations this actor may propose.
+
+  Before this catalog the governor judged a proposal by its facility, its
+  `:effect`, its confidence and two named escalations — and accepted every
+  other `:op` it had never heard of. The advisor is swappable and
+  `llm-advisor` passes through whatever `:op` the model wrote, so
+  `{:op :apply-therapeutant :effect :propose :confidence 0.9}` for a verified
+  facility came back `:ok? true` and was committed as an operating record with
+  no human sign-off. This is the allow-list the governor now checks against.
+
+  Two kinds of op:
+    permitted  — may be proposed; the governor still applies its other rules.
+    anything else — unknown, and a hard `:unknown-op` block. That includes
+                 `:unknown`, which `advisor/parse-proposal` emits when the
+                 model's reply could not be read: there is no proposal to
+                 approve, so it holds rather than asking a human to sign off
+                 on nothing.")
+
+(def permitted
+  "Ops the advisor may propose, with what each one produces."
+  {:schedule-harvest   "a proposed harvest schedule for the manager's review"
+   :log-yield-report   "a production / yield log entry"
+   :order-supplies     "a proposed supply order (escalates at or above the cost threshold)"
+   :flag-stock-anomaly "a stock / water-quality anomaly for a human to review (always escalates)"})
+
+(defn permitted? [op] (contains? permitted op))
+
+(defn unknown?
+  "True for an op the catalog does not permit."
+  [op]
+  (not (permitted? op)))

@@ -68,10 +68,15 @@ human-in-the-loop interrupt/resume via checkpointing.
   request; `llm-advisor` wraps a `langchain.model/ChatModel` — either
   way the advisor only ever produces a `:propose`-effect proposal,
   never a committed record, and LLM parse failures always yield
-  `:confidence 0.0` (forces escalation, never fabricated confidence).
+  `{:op :unknown :confidence 0.0}` (never fabricated confidence), which the
+  governor holds as an op outside the catalog.
+- `src/aquaculture_management/operations.kotoba` — the closed vocabulary of
+  ops: `:schedule-harvest`, `:log-yield-report`, `:order-supplies`,
+  `:flag-stock-anomaly`. An op outside it is refused.
 - `src/aquaculture_management/governor.kotoba` — `AquacultureGovernor/check`: a pure
   function, wired as its own `:govern` node. Hard invariants
-  (unregistered facility, a proposal whose `:effect` isn't `:propose`)
+  (unregistered facility, a proposal whose `:effect` isn't `:propose`,
+  an `:op` outside `aquaculture-management.operations`)
   always route to `:hold`. Escalation invariants (`:flag-stock-anomaly`,
   `:order-supplies` above cost threshold, or low advisor confidence) always route to
   `:request-approval` — an `interrupt-before` node that the graph
@@ -83,8 +88,19 @@ human-in-the-loop interrupt/resume via checkpointing.
   `approve!`: the `langgraph.graph/state-graph` wiring itself.
 
 ```bash
-kbb -M:test
+kbb --backend sci test/run_suite.cljk
 ```
+
+The suite is **19 tests / 54 assertions**. `test/run_suite.cljk` reads that
+sentence and refuses (exit 2) any run that comes in under it. `kbb -M:test`
+does not run this suite: the sources are `.kotoba`, which the test runner does
+not collect.
+
+Before `aquaculture-management.operations` (2026-09-24) the governor accepted
+any op it had not heard of: `{:op :apply-therapeutant :effect :propose
+:confidence 0.9}` for a verified facility was `:ok? true` and committed an
+operating record with no human sign-off. `hard-on-op-outside-the-catalog` and
+`end-to-end-hold-on-op-outside-the-catalog` pin the refusal.
 
 This is what backs this repo's `:maturity :implemented` entry in
 [`kotoba-lang/occupation`](https://github.com/kotoba-lang/occupation).
