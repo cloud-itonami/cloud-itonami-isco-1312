@@ -1,0 +1,32 @@
+;; What this vertical's robot physically does, declared for
+;; kotoba.robotics.process (kotoba-lang/robotics). `kbb -M:physics` runs it.
+;;
+;; README "Robotics premise": a data-collection robot performs harvest
+;; scheduling, yield logging, supply ordering and stock/water-quality anomaly
+;; detection for aquaculture and fisheries production managers (ISCO 1312).
+;; The physics it has to reason about is the farm's water: how fast a
+;; culture tank drops to harvest depth when its drain is opened, and what
+;; the recirculation line costs in pump power at the flow the stock needs.
+;;
+;; Every number without a cited source is marked `estimate` in its :basis.
+;; Replacing an estimate with a sourced value is this bot's growth work.
+{:physics/schema "itonami.physical-ai.spec.v1"
+ :repo "cloud-itonami/cloud-itonami-isco-1312"
+ :cases
+ [{:id :harvest-drawdown
+   :kind :tank-drain
+   :procedure "for a scheduled harvest the robot opens the centre drain of a 20 m2 circular culture tank and logs the drawdown from 2.0 m to the 0.4 m crowding depth; drain opening swept"
+   :params {:tank-area-m2 20.0 :h0-m 2.0 :h-target-m 0.4 :cd 0.62 :q-in-m3s 0.0 :dt-s 1.0 :max-time-s 86400.0}
+   :sweep {:param :orifice-area-m2 :values [0.003 0.005 0.008 0.012 0.018]}
+   :quantity :time-to-target-s
+   :limit {:max 1800.0 :basis "estimate: drawdown to crowding depth within about 30 minutes to keep the fasting and handling stress window short"}
+   :boundary {:lo 0.001 :hi 0.03}}
+  {:id :recirculation-line-power
+   :kind :pipe-flow
+   :procedure "robot checks the recirculation pump duty: 80 m of 110 mm PVC line (~102 mm bore) returning biofilter water to the tank, 3 m lift; flow swept"
+   :params {:diameter-m 0.102 :length-m 80.0 :roughness-m 1.5e-6 :elevation-m 3.0
+            :density-kg-m3 1000.0 :viscosity-pa-s 1.0e-3 :pump-efficiency 0.65}
+   :sweep {:param :q-m3s :values [0.005 0.010 0.015 0.020 0.030]}
+   :quantity :pump-power-w
+   :limit {:max 1500.0 :basis "estimate: rated shaft power of the 1.5 kW recirculation pump installed on this tank line"}
+   :boundary {:lo 0.002 :hi 0.04}}]}
