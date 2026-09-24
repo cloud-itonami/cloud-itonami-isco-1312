@@ -16,7 +16,7 @@ README の Robotics premise: データ収集ロボットが収穫計画・収量
 | `:recirculation-line-power` | pipe-flow | 循環ポンプの負荷点検: 生物ろ過槽から飼育槽へ戻す 110 mm PVC 管（内径約 102 mm）80 m、揚程 3 m（流量を掃引） | ポンプ軸動力 | 1500 W（estimate） |
 
 測定の入口: `kbb -M:physics`。全 run が数値を返さなければ exit 2 = **測れなかった**（「異常なし」ではない）。
-test: `kbb -M:physai-test`（`test/aquaculture_management/physics_spec_test.cljk` が physics.edn の妥当性と全 run の計測を検査する）。
+test: `kbb -M:physai-test`（`test-physai/aquaculture_management/physics_spec_test.cljk` が physics.edn の妥当性と全 run の計測を検査する）。
 この repo 自身の `.kotoba` test は kbb では走らない（fleet の JVM gate が走らせる）。この bot の test 数は physics の test だけを数える。
 
 ## 測って分かったこと・限界（成長の第一候補）
